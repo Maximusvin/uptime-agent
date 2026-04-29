@@ -251,7 +251,10 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
       .get()
       .filter((link, index, self) => link && self.indexOf(link) === index) as string[];
 
+    const internalLinksCount = internalLinksList.length;
+
     // Track assets (images, scripts, styles)
+
     const assetsList: string[] = [];
     $("img[src], script[src], link[rel='stylesheet']").each((_, el) => {
       const src = $(el).attr("src") || $(el).attr("href");

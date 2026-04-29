@@ -153,14 +153,53 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
     const bodyText = $("body").text();
     const wordCount = bodyText.split(/\s+/).filter(Boolean).length;
 
-    const internalLinks = $("a[href]").filter((_, el) => {
-      const href = $(el).attr("href") || "";
-      return (
-        href.startsWith("/") ||
-        href.startsWith(monitor.url) ||
-        !href.startsWith("http")
-      );
-    }).length;
+    const internalLinksList = $("a[href]")
+      .map((_, el) => {
+        const href = $(el).attr("href") || "";
+        if (
+          href.startsWith("/") ||
+          href.startsWith(monitor.url) ||
+          !href.startsWith("http")
+        ) {
+          try {
+            return new URL(href, monitor.url).href;
+          } catch {
+            return null;
+          }
+        }
+        return null;
+      })
+      .get()
+      .filter((link, index, self) => link && self.indexOf(link) === index) as string[];
+
+    const internalLinksCount = internalLinksList.length;
+    let brokenLinksCount = 0;
+
+    // Check a sample of links if there are too many, but for now let's try to check up to 50
+    const linksToCheck = internalLinksList.slice(0, 50);
+    
+    const checkLink = async (url: string) => {
+      try {
+        const res = await axios.head(url, { 
+          timeout: 5000, 
+          validateStatus: () => true,
+          headers: { "User-Agent": "UptimeAgent-LinkChecker/1.0" }
+        });
+        if (res.status >= 400) brokenLinksCount++;
+      } catch (error) {
+        brokenLinksCount++;
+      }
+    };
+
+    // Run checks with concurrency limit of 5
+    const chunks = [];
+    for (let i = 0; i < linksToCheck.length; i += 5) {
+      chunks.push(linksToCheck.slice(i, i + 5));
+    }
+
+    for (const chunk of chunks) {
+      await Promise.all(chunk.map(checkLink));
+    }
 
     // Check robots.txt and sitemap
     const baseUrl = new URL(monitor.url).origin;
@@ -183,7 +222,8 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
         canonical,
         ogImage,
         wordCount,
-        internalLinks,
+        internalLinks: internalLinksCount,
+        brokenLinks: brokenLinksCount,
         hasRobotsTxt,
         hasSitemap,
       },
@@ -192,3 +232,4 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
     console.error(`[SEO Scan] Failed for ${monitor.url}:`, error);
   }
 }
+

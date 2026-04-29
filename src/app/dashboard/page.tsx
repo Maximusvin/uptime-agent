@@ -23,7 +23,7 @@ export default async function DashboardPage() {
     console.log("Migration notice (expected during sync):", e);
   }
 
-  let monitors = [];
+  let monitors: any[] = [];
   try {
     monitors = await prisma.monitor.findMany({
       where: { userId: session.user.id },

@@ -127,7 +127,9 @@ model SeoSnapshot {
   foundUrls       Json?    // List of internal URLs discovered
   newUrls         Json?    // List of new URLs since last scan
   keywordsFound   Json?    // Result of keyword search { keyword: found_bool }
-  pageSpeedScore  Int?     // 0–100 if available
+  performanceScore Int?     // Google PageSpeed Performance 0-100
+  accessibilityScore Int?   // Google PageSpeed Accessibility 0-100
+  seoScore        Int?     // Google PageSpeed SEO 0-100
 
   monitor         Monitor  @relation(fields: [monitorId], references: [id], onDelete: Cascade)
 

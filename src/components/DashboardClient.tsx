@@ -19,6 +19,8 @@ import {
   History,
   FileSearch,
   ArrowRight,
+  FileDiff,
+  ImageOff,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Sidebar from "./Sidebar";

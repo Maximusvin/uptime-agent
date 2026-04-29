@@ -944,26 +944,36 @@ body {
 .url-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   max-height: 200px;
   overflow-y: auto;
-  padding: 8px;
-  background: rgba(0, 0, 0, 0.2);
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
   border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .url-item {
+  display: block;
   font-size: 11px;
-  font-family: monospace;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
   color: var(--color-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-decoration: none;
+  word-break: break-all;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  transition: all 0.2s;
+}
+
+.url-item:hover {
+  color: var(--color-primary-light);
+  padding-left: 4px;
 }
 
 .url-item.new {
   color: var(--color-success);
 }
+
 
 .select-prompt {
   height: 100%;

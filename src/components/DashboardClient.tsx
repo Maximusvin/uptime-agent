@@ -16,6 +16,9 @@ import {
   X,
   Play,
   Loader2,
+  History,
+  FileSearch,
+  ArrowRight,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Sidebar from "./Sidebar";
@@ -34,6 +37,9 @@ interface SeoSnapshot {
   wordCount: number | null;
   internalLinks: number | null;
   brokenLinks: number | null;
+  foundUrls: string[] | null;
+  newUrls: string[] | null;
+  snapshotAt: string;
   hasRobotsTxt: boolean | null;
   hasSitemap: boolean | null;
 }
@@ -80,6 +86,9 @@ export default function DashboardClient({ user, monitors: initial }: Props) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [checkingId, setCheckingId] = useState<string | null>(null);
   const [showResult, setShowResult] = useState<Monitor | null>(null);
+  const [historyMonitor, setHistoryMonitor] = useState<Monitor | null>(null);
+  const [historySnapshots, setHistorySnapshots] = useState<SeoSnapshot[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Видалити монітор?")) return;
@@ -124,6 +133,18 @@ export default function DashboardClient({ user, monitors: initial }: Props) {
     }
   };
 
+  const handleViewHistory = async (monitor: Monitor) => {
+    setHistoryMonitor(monitor);
+    setLoadingHistory(true);
+    try {
+      const res = await fetch(`/api/monitors/${monitor.id}/history`);
+      if (res.ok) {
+        setHistorySnapshots(await res.json());
+      }
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
   const onMonitorAdded = (newMonitor: Monitor) => {
     setMonitors((m) => [newMonitor, ...m]);
     setShowAddModal(false);
@@ -215,6 +236,7 @@ export default function DashboardClient({ user, monitors: initial }: Props) {
                 onDelete={handleDelete}
                 onToggle={handleToggle}
                 onCheck={handleManualCheck}
+                onViewHistory={handleViewHistory}
               />
             ))}
           </div>
@@ -273,6 +295,25 @@ function CheckResultModal({ monitor, onClose }: { monitor: Monitor, onClose: () 
         {lastSnapshot && (
           <div className="seo-results">
             <h3 className="section-title">SEO Аналіз</h3>
+            
+            {lastSnapshot.newUrls && lastSnapshot.newUrls.length > 0 && (
+              <div className="new-pages-alert glass">
+                <div className="alert-header">
+                  <FileSearch size={16} className="text-primary" />
+                  <span>Виявлено {lastSnapshot.newUrls.length} нових сторінок!</span>
+                </div>
+                <div className="new-urls-list">
+                  {lastSnapshot.newUrls.slice(0, 5).map((url, i) => (
+                    <div key={i} className="new-url-item">
+                      <ArrowRight size={10} />
+                      <span className="truncate">{url}</span>
+                    </div>
+                  ))}
+                  {lastSnapshot.newUrls.length > 5 && <div className="more-urls">...та ще {lastSnapshot.newUrls.length - 5}</div>}
+                </div>
+              </div>
+            )}
+
             <div className="seo-grid">
               <div className="seo-item">
                 <div className="result-label">Title</div>
@@ -333,6 +374,112 @@ function CheckResultModal({ monitor, onClose }: { monitor: Monitor, onClose: () 
   );
 }
 
+function HistoryModal({ 
+  monitor, 
+  snapshots, 
+  loading, 
+  onClose 
+}: { 
+  monitor: Monitor; 
+  snapshots: SeoSnapshot[]; 
+  loading: boolean;
+  onClose: () => void;
+}) {
+  const [selectedSnapshot, setSelectedSnapshot] = useState<SeoSnapshot | null>(null);
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal-content glass fade-in-up" style={{ maxWidth: 800, width: '90%' }}>
+        <div className="modal-header">
+          <h2 className="modal-title">Історія перевірок: {monitor.name}</h2>
+          <button className="btn-icon" onClick={onClose}><X size={18} /></button>
+        </div>
+
+        <div className="history-layout">
+          <div className="history-sidebar">
+            {loading ? (
+              <div className="loading-state"><Loader2 className="animate-spin" /></div>
+            ) : snapshots.length === 0 ? (
+              <div className="empty-history">Історія порожня</div>
+            ) : (
+              <div className="snapshot-list">
+                {snapshots.map((s) => (
+                  <button 
+                    key={s.snapshotAt} 
+                    className={`snapshot-item ${selectedSnapshot?.snapshotAt === s.snapshotAt ? 'active' : ''}`}
+                    onClick={() => setSelectedSnapshot(s)}
+                  >
+                    <div className="snapshot-date">
+                      {new Date(s.snapshotAt).toLocaleString("uk-UA", {
+                        day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
+                      })}
+                    </div>
+                    <div className="snapshot-meta">
+                      {s.internalLinks} сторінок
+                      {s.newUrls && s.newUrls.length > 0 && (
+                        <span className="new-badge">+{s.newUrls.length}</span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="history-content">
+            {selectedSnapshot ? (
+              <div className="snapshot-details fade-in">
+                <div className="details-header">
+                  <h3>Деталі за {new Date(selectedSnapshot.snapshotAt).toLocaleString()}</h3>
+                </div>
+                
+                <div className="details-scrollable">
+                  <div className="metrics-row">
+                    <div className="metric-box">
+                      <span className="label">Слів</span>
+                      <span className="value">{selectedSnapshot.wordCount}</span>
+                    </div>
+                    <div className="metric-box">
+                      <span className="label">Посилань</span>
+                      <span className="value">{selectedSnapshot.internalLinks}</span>
+                    </div>
+                    <div className="metric-box">
+                      <span className="label">Битих</span>
+                      <span className="value text-danger">{selectedSnapshot.brokenLinks || 0}</span>
+                    </div>
+                  </div>
+
+                  {selectedSnapshot.newUrls && selectedSnapshot.newUrls.length > 0 && (
+                    <div className="diff-section">
+                      <h4>Нові сторінки</h4>
+                      <div className="url-list">
+                        {selectedSnapshot.newUrls.map((url, i) => (
+                          <div key={i} className="url-item new">{url}</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="diff-section">
+                    <h4>Структура сайту</h4>
+                    <div className="url-list">
+                      {selectedSnapshot.foundUrls?.map((url, i) => (
+                        <div key={i} className="url-item">{url}</div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="select-prompt">Оберіть перевірку зі списку зліва</div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MonitorCard({
   monitor,
   index,
@@ -340,6 +487,7 @@ function MonitorCard({
   onDelete,
   onToggle,
   onCheck,
+  onViewHistory,
 }: {
   monitor: Monitor;
   index: number;
@@ -347,6 +495,7 @@ function MonitorCard({
   onDelete: (id: string) => void;
   onToggle: (m: Monitor) => void;
   onCheck: (id: string) => void;
+  onViewHistory: (m: Monitor) => void;
 }) {
   const status = monitor.lastStatus ?? "UNKNOWN";
   const badgeClass =
@@ -387,6 +536,10 @@ function MonitorCard({
 
           <button className="btn-icon" onClick={() => onCheck(monitor.id)} disabled={isChecking} title="Запустити аналіз зараз">
             {isChecking ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} style={{ color: "var(--color-primary-light)" }} />}
+          </button>
+
+           <button className="btn-icon" onClick={() => onViewHistory(monitor)} title="Історія перевірок">
+            <History size={16} style={{ color: "var(--color-primary-light)" }} />
           </button>
 
           <button className="btn-icon" onClick={() => onToggle(monitor)} title={monitor.active ? "Зупинити" : "Увімкнути"}>

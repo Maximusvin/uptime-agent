@@ -35,6 +35,19 @@ export async function POST(
       await prisma.$executeRawUnsafe(`
         ALTER TABLE "SeoSnapshot" ADD COLUMN IF NOT EXISTS "brokenUrls" JSONB;
       `);
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE "SeoSnapshot" ADD COLUMN IF NOT EXISTS "keywordsFound" JSONB;
+      `);
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE "Monitor" ADD COLUMN IF NOT EXISTS "sslValidUntil" TIMESTAMP;
+      `);
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE "Monitor" ADD COLUMN IF NOT EXISTS "sslIssuer" TEXT;
+      `);
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE "Monitor" ADD COLUMN IF NOT EXISTS "keywords" TEXT;
+      `);
+
 
     } catch (e) {
       // Silence errors if columns already exist or if there's a permission issue

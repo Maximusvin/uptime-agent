@@ -77,6 +77,13 @@ model Monitor {
   lastResponseMs  Int?
   uptimePercent   Float?        // calculated uptime %
 
+  // SSL Monitoring
+  sslValidUntil  DateTime?
+  sslIssuer      String?
+
+  // SEO Keywords
+  keywords       String?   // Comma-separated keywords to track
+
   user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   checkLogs       CheckLog[]
   seoSnapshots    SeoSnapshot[]
@@ -116,6 +123,7 @@ model SeoSnapshot {
   brokenUrls      Json?    // List of specific broken URLs found
   foundUrls       Json?    // List of internal URLs discovered
   newUrls         Json?    // List of new URLs since last scan
+  keywordsFound   Json?    // Result of keyword search { keyword: found_bool }
   pageSpeedScore  Int?     // 0–100 if available
 
   monitor         Monitor  @relation(fields: [monitorId], references: [id], onDelete: Cascade)

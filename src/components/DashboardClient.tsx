@@ -40,6 +40,7 @@ interface SeoSnapshot {
   brokenUrls: string[] | null;
   foundUrls: string[] | null;
   newUrls: string[] | null;
+  keywordsFound: Record<string, boolean> | null;
   snapshotAt: string;
   hasRobotsTxt: boolean | null;
   hasSitemap: boolean | null;
@@ -59,7 +60,11 @@ interface Monitor {
   uptimePercent: number | null;
   checkLogs: CheckLog[];
   seoSnapshots?: SeoSnapshot[];
+  sslValidUntil: string | null;
+  sslIssuer: string | null;
+  keywords: string | null;
 }
+
 
 interface Stats {
   totalMonitors: number;
@@ -140,8 +145,17 @@ export default function DashboardClient({ user, monitors: initial }: Props) {
     try {
       const res = await fetch(`/api/monitors/${monitor.id}/history`);
       if (res.ok) {
-        setHistorySnapshots(await res.json());
+        const data = await res.json();
+        // Force foundUrls to be array if it's not
+        const sanitizedData = data.map((s: any) => ({
+          ...s,
+          foundUrls: Array.isArray(s.foundUrls) ? s.foundUrls : [],
+          newUrls: Array.isArray(s.newUrls) ? s.newUrls : [],
+          brokenUrls: Array.isArray(s.brokenUrls) ? s.brokenUrls : [],
+        }));
+        setHistorySnapshots(sanitizedData);
       }
+
     } finally {
       setLoadingHistory(false);
     }
@@ -382,6 +396,19 @@ function CheckResultModal({ monitor, onClose }: { monitor: Monitor, onClose: () 
               </div>
             </div>
             
+            {lastSnapshot.keywordsFound && Object.keys(lastSnapshot.keywordsFound).length > 0 && (
+              <div className="seo-keywords glass" style={{ marginTop: 12, padding: 12, borderRadius: 'var(--radius-sm)' }}>
+                <h4 style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: 'var(--color-primary-light)' }}>Ключові слова</h4>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {Object.entries(lastSnapshot.keywordsFound).map(([kw, found]) => (
+                    <div key={kw} className={`badge-${found ? 'up' : 'unknown'}`} style={{ fontSize: 11, padding: '2px 8px' }}>
+                      {kw}: {found ? 'Знайдено' : 'Немає'}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="seo-checks">
               <div className="check-item">
                 {lastSnapshot.hasRobotsTxt ? <CheckCircle2 size={14} className="text-success" /> : <AlertTriangle size={14} className="text-warning" />}
@@ -492,6 +519,16 @@ function HistoryModal({
                     </div>
                   </div>
 
+                  {monitor.sslValidUntil && (
+                    <div className="metric-box" style={{ marginTop: 8 }}>
+                      <span className="label">SSL Сертифікат</span>
+                      <span className="value" style={{ fontSize: 12 }}>
+                         {monitor.sslIssuer} (до {new Date(monitor.sslValidUntil).toLocaleDateString()})
+                      </span>
+                    </div>
+                  )}
+
+
                   {selectedSnapshot.newUrls && selectedSnapshot.newUrls.length > 0 && (
                     <div className="diff-section">
                       <h4>Нові сторінки (+{selectedSnapshot.newUrls.length})</h4>
@@ -597,7 +634,14 @@ function MonitorCard({
                 {monitor.uptimePercent.toFixed(1)}%
               </span>
             )}
+            {monitor.sslValidUntil && (
+              <span className="mc-meta-item" title={`SSL від ${monitor.sslIssuer}`}>
+                <CheckCircle2 size={12} className="text-success" />
+                SSL: {new Date(monitor.sslValidUntil) > new Date() ? 'OK' : 'Expired'}
+              </span>
+            )}
           </div>
+
 
           <button className="btn-icon" onClick={() => onCheck(monitor.id)} disabled={isChecking} title="Запустити аналіз зараз">
             {isChecking ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} style={{ color: "var(--color-primary-light)" }} />}
@@ -629,7 +673,7 @@ function MonitorCard({
 }
 
 function AddMonitorModal({ onClose, onAdded }: { onClose: () => void; onAdded: (m: Monitor) => void }) {
-  const [form, setForm] = useState({ name: "", url: "", interval: "5", telegramChatId: "" });
+  const [form, setForm] = useState({ name: "", url: "", interval: "5", telegramChatId: "", keywords: "" });
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -673,6 +717,10 @@ function AddMonitorModal({ onClose, onAdded }: { onClose: () => void; onAdded: (
               <option value="60">1 год</option>
               <option value="300">5 год</option>
             </select>
+          </div>
+          <div className="form-group">
+            <label className="input-label">Ключові слова (через кому)</label>
+            <input className="input" placeholder="медицина, лаболаторія, аналізи" value={form.keywords} onChange={(e) => setForm({ ...form, keywords: e.target.value })} />
           </div>
           <div className="form-group">
             <label className="input-label">Telegram Chat ID (необов'язково)</label>

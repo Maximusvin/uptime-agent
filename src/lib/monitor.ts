@@ -1,8 +1,47 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
+import https from "https";
 import { prisma } from "@/lib/prisma";
 import { sendTelegramAlert } from "@/lib/telegram";
 import type { CheckStatus } from "@/generated/prisma";
+
+
+async function getSslInfo(url: string): Promise<{ validUntil: Date | null, issuer: string | null }> {
+  return new Promise((resolve) => {
+    try {
+      const parsedUrl = new URL(url);
+      if (parsedUrl.protocol !== "https:") {
+        return resolve({ validUntil: null, issuer: null });
+      }
+      const hostname = parsedUrl.hostname;
+      const req = https.request({
+        hostname,
+        port: 443,
+        method: "GET",
+        rejectUnauthorized: false,
+        timeout: 5000,
+      }, (res) => {
+        const cert = (res.socket as any).getPeerCertificate();
+        if (cert && cert.valid_to) {
+          resolve({
+            validUntil: new Date(cert.valid_to),
+            issuer: cert.issuer?.O || cert.issuer?.CN || "Unknown"
+          });
+        } else {
+          resolve({ validUntil: null, issuer: null });
+        }
+      });
+      req.on("error", () => resolve({ validUntil: null, issuer: null }));
+      req.on("timeout", () => {
+        req.destroy();
+        resolve({ validUntil: null, issuer: null });
+      });
+      req.end();
+    } catch {
+      resolve({ validUntil: null, issuer: null });
+    }
+  });
+}
 
 interface CheckResult {
   status: CheckStatus;
@@ -19,7 +58,10 @@ export async function checkMonitor(monitorId: string): Promise<void> {
   if (!monitor || !monitor.active) return;
 
   const previousStatus = monitor.lastStatus;
-  const result = await performCheck(monitor.url);
+  const [result, sslInfo] = await Promise.all([
+    performCheck(monitor.url),
+    getSslInfo(monitor.url)
+  ]);
 
   // Save log
   await prisma.checkLog.create({
@@ -32,7 +74,7 @@ export async function checkMonitor(monitorId: string): Promise<void> {
     },
   });
 
-  // Update monitor last status
+  // Update monitor last status and SSL
   await prisma.monitor.update({
     where: { id: monitor.id },
     data: {
@@ -40,8 +82,11 @@ export async function checkMonitor(monitorId: string): Promise<void> {
       lastStatus: result.status,
       lastStatusCode: result.statusCode,
       lastResponseMs: result.responseMs,
+      sslValidUntil: sslInfo.validUntil,
+      sslIssuer: sslInfo.issuer,
     },
   });
+
 
   // Recalculate uptime (last 24h)
   await recalculateUptime(monitorId);
@@ -153,6 +198,15 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
     const bodyText = $("body").text();
     const wordCount = bodyText.split(/\s+/).filter(Boolean).length;
 
+    // Track keywords
+    const keywordsToTrack = monitor.keywords?.split(",").map(k => k.trim()).filter(Boolean) || [];
+    const keywordsFound: Record<string, boolean> = {};
+    const textToSearch = (title + " " + metaDescription + " " + h1 + " " + bodyText).toLowerCase();
+    
+    keywordsToTrack.forEach(kw => {
+      keywordsFound[kw] = textToSearch.includes(kw.toLowerCase());
+    });
+
     const internalLinksList = $("a[href]")
       .map((_, el) => {
         const href = $(el).attr("href") || "";
@@ -237,6 +291,7 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
           brokenUrls: brokenUrlsList,
           foundUrls: internalLinksList,
           newUrls: newUrlsList,
+          keywordsFound: keywordsFound,
           hasRobotsTxt,
           hasSitemap,
         },
@@ -260,6 +315,7 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
         } as any,
       }).catch(e => console.error("[SEO Scan] Fallback save also failed:", e));
     }
+
 
   } catch (error) {
     console.error(`[SEO Scan] Failed for ${monitor.url}:`, error);

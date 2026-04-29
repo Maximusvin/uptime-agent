@@ -1,6 +1,8 @@
+import crypto from "crypto";
 import axios from "axios";
 import * as cheerio from "cheerio";
 import https from "https";
+
 import { prisma } from "@/lib/prisma";
 import { sendTelegramAlert } from "@/lib/telegram";
 import type { CheckStatus } from "@/generated/prisma";
@@ -197,6 +199,8 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
 
     const bodyText = $("body").text();
     const wordCount = bodyText.split(/\s+/).filter(Boolean).length;
+    const contentHash = crypto.createHash("md5").update(bodyText).digest("hex");
+
 
     // Track keywords
     const keywordsToTrack = monitor.keywords?.split(",").map(k => k.trim()).filter(Boolean) || [];
@@ -303,7 +307,9 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
           brokenUrls: brokenUrlsList,
           brokenAssets: brokenAssetsList.length,
           brokenAssetsList: brokenAssetsList,
+          contentHash,
           foundUrls: internalLinksList,
+
           newUrls: newUrlsList,
           keywordsFound: keywordsFound,
           hasRobotsTxt,

@@ -23,9 +23,24 @@ export async function POST(
   }
 
   try {
+    // AUTO-MIGRATION: Attempt to add missing columns if they don't exist
+    // This allows the app to self-heal without manual terminal commands
+    try {
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE "SeoSnapshot" ADD COLUMN IF NOT EXISTS "foundUrls" JSONB;
+      `);
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE "SeoSnapshot" ADD COLUMN IF NOT EXISTS "newUrls" JSONB;
+      `);
+    } catch (e) {
+      // Silence errors if columns already exist or if there's a permission issue
+      console.log("Auto-migration notice (can be ignored):", e);
+    }
+
     // Perform actual check and SEO scan
     await checkMonitor(monitor.id);
     await scanSeoSnapshot(monitor.id);
+
     
     // Update the daily report for today so it shows up in the Reports tab
     await generateUserReport(session.user.id, new Date());

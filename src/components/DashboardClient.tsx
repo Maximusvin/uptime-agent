@@ -33,6 +33,7 @@ interface SeoSnapshot {
   h1: string | null;
   wordCount: number | null;
   internalLinks: number | null;
+  brokenLinks: number | null;
   hasRobotsTxt: boolean | null;
   hasSitemap: boolean | null;
 }
@@ -287,7 +288,19 @@ function CheckResultModal({ monitor, onClose }: { monitor: Monitor, onClose: () 
               </div>
               <div className="seo-item">
                 <div className="result-label">Внутрішні лінки</div>
-                <div className="result-value">{lastSnapshot.internalLinks || 0}</div>
+                <div className="result-value">
+                  {lastSnapshot.internalLinks || 0}
+                  {lastSnapshot.brokenLinks != null && lastSnapshot.brokenLinks > 0 && (
+                    <span className="text-danger" style={{ fontSize: 11, marginLeft: 8 }}>
+                      ({lastSnapshot.brokenLinks} битих)
+                    </span>
+                  )}
+                  {lastSnapshot.brokenLinks === 0 && (
+                    <span className="text-success" style={{ fontSize: 11, marginLeft: 8 }}>
+                      (всі ок)
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             
@@ -303,6 +316,10 @@ function CheckResultModal({ monitor, onClose }: { monitor: Monitor, onClose: () 
               <div className="check-item">
                 {lastSnapshot.metaDescription ? <CheckCircle2 size={14} className="text-success" /> : <AlertTriangle size={14} className="text-warning" />}
                 <span>Meta Description</span>
+              </div>
+              <div className="check-item">
+                {lastSnapshot.brokenLinks === 0 ? <CheckCircle2 size={14} className="text-success" /> : (lastSnapshot.brokenLinks ? <AlertTriangle size={14} className="text-danger" /> : <Clock size={14} />)}
+                <span>Перевірка посилань</span>
               </div>
             </div>
           </div>

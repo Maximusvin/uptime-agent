@@ -226,34 +226,46 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
       .get()
       .filter((link, index, self) => link && self.indexOf(link) === index) as string[];
 
-    const internalLinksCount = internalLinksList.length;
-    const brokenUrlsList: string[] = [];
+    // Track assets (images, scripts, styles)
+    const assetsList: string[] = [];
+    $("img[src], script[src], link[rel='stylesheet']").each((_, el) => {
+      const src = $(el).attr("src") || $(el).attr("href");
+      if (src) {
+        try {
+          assetsList.push(new URL(src, monitor.url).href);
+        } catch {}
+      }
+    });
 
-    // Limit to 20 links for faster manual checks to avoid Vercel timeouts
-    const linksToCheck = internalLinksList.slice(0, 20);
+    const brokenUrlsList: string[] = [];
+    const brokenAssetsList: string[] = [];
+
+    // Limit checks to avoid timeouts
+    const internalLinksToCheck = internalLinksList.slice(0, 15);
+    const assetsToCheck = [...new Set(assetsList)].slice(0, 15);
     
-    const checkLink = async (url: string) => {
+    const checkResource = async (url: string, isAsset: boolean) => {
       try {
         const res = await axios.head(url, { 
           timeout: 4000, 
           validateStatus: () => true,
-          headers: { "User-Agent": "UptimeAgent-LinkChecker/1.0" }
+          headers: { "User-Agent": "UptimeAgent-Checker/1.0" }
         });
-        if (res.status >= 400) brokenUrlsList.push(url);
-      } catch (error) {
-        brokenUrlsList.push(url);
+        if (res.status >= 400) {
+          if (isAsset) brokenAssetsList.push(url);
+          else brokenUrlsList.push(url);
+        }
+      } catch {
+        if (isAsset) brokenAssetsList.push(url);
+        else brokenUrlsList.push(url);
       }
     };
 
-    // Run checks with concurrency limit of 10 for speed
-    const chunks = [];
-    for (let i = 0; i < linksToCheck.length; i += 10) {
-      chunks.push(linksToCheck.slice(i, i + 10));
-    }
-
-    for (const chunk of chunks) {
-      await Promise.all(chunk.map(checkLink));
-    }
+    // Parallel checks
+    await Promise.all([
+      ...internalLinksToCheck.map(url => checkResource(url, false)),
+      ...assetsToCheck.map(url => checkResource(url, true))
+    ]);
 
     // Check robots.txt and sitemap
     const baseUrl = new URL(monitor.url).origin;
@@ -289,6 +301,8 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
           internalLinks: internalLinksCount,
           brokenLinks: brokenUrlsList.length,
           brokenUrls: brokenUrlsList,
+          brokenAssets: brokenAssetsList.length,
+          brokenAssetsList: brokenAssetsList,
           foundUrls: internalLinksList,
           newUrls: newUrlsList,
           keywordsFound: keywordsFound,
@@ -297,7 +311,7 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
         },
       });
     } catch (dbError) {
-      console.error("[SEO Scan] Database save failed. Did you run prisma db push?", dbError);
+      console.error("[SEO Scan] Database save failed. Fallback triggered.", dbError);
       // Fallback
       await prisma.seoSnapshot.create({
         data: {
@@ -315,6 +329,7 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
         } as any,
       }).catch(e => console.error("[SEO Scan] Fallback save also failed:", e));
     }
+
 
 
   } catch (error) {

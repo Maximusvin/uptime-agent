@@ -177,16 +177,37 @@ async function recalculateUptime(monitorId: string): Promise<void> {
   });
 }
 
+async function getPageSpeedScores(url: string): Promise<{ performance: number, accessibility: number, seo: number } | null> {
+  try {
+    // Using the public API endpoint
+    const psiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&category=PERFORMANCE&category=ACCESSIBILITY&category=SEO&strategy=mobile`;
+    const res = await axios.get(psiUrl, { timeout: 20000 }); // 20s limit for safety
+    const categories = res.data.lighthouseResult.categories;
+    return {
+      performance: Math.round(categories.performance.score * 100),
+      accessibility: Math.round(categories.accessibility.score * 100),
+      seo: Math.round(categories.seo.score * 100),
+    };
+  } catch (e) {
+    console.log("[PSI] Notice: PageSpeed check skipped or timed out.");
+    return null;
+  }
+}
+
 export async function scanSeoSnapshot(monitorId: string): Promise<void> {
   const monitor = await prisma.monitor.findUnique({ where: { id: monitorId } });
   if (!monitor) return;
 
   try {
     const start = Date.now();
-    const response = await axios.get(monitor.url, {
-      timeout: 20000,
-      headers: { "User-Agent": "UptimeAgent-SEO/1.0" },
-    });
+    const [response, psiScores] = await Promise.all([
+      axios.get(monitor.url, {
+        timeout: 20000,
+        headers: { "User-Agent": "UptimeAgent-SEO/1.0" },
+      }),
+      getPageSpeedScores(monitor.url)
+    ]);
+
 
     const $ = cheerio.load(response.data as string);
 
@@ -314,6 +335,9 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
           keywordsFound: keywordsFound,
           hasRobotsTxt,
           hasSitemap,
+          performanceScore: psiScores?.performance,
+          accessibilityScore: psiScores?.accessibility,
+          seoScore: psiScores?.seo,
         },
       });
     } catch (dbError) {

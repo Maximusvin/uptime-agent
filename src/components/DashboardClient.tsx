@@ -44,6 +44,9 @@ interface SeoSnapshot {
   foundUrls: string[] | null;
   newUrls: string[] | null;
   keywordsFound: Record<string, boolean> | null;
+  performanceScore: number | null;
+  accessibilityScore: number | null;
+  seoScore: number | null;
   snapshotAt: string;
   hasRobotsTxt: boolean | null;
   hasSitemap: boolean | null;
@@ -297,6 +300,13 @@ function CheckResultModal({ monitor, onClose }: { monitor: Monitor, onClose: () 
     if (url.startsWith('http')) return url;
     return `https://${url}`;
   };
+
+  const getScoreColor = (score: number | null | undefined) => {
+    if (score === null || score === undefined) return 'var(--color-text-muted)';
+    if (score >= 90) return 'var(--color-success)';
+    if (score >= 50) return 'var(--color-warning)';
+    return 'var(--color-danger)';
+  };
   
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -399,6 +409,22 @@ function CheckResultModal({ monitor, onClose }: { monitor: Monitor, onClose: () 
             )}
 
 
+            {(lastSnapshot.performanceScore !== null || lastSnapshot.accessibilityScore !== null || lastSnapshot.seoScore !== null) && (
+              <div className="seo-scores" style={{ display: 'flex', gap: 16, marginTop: 16, padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ fontSize: 24, fontWeight: 'bold', color: getScoreColor(lastSnapshot.performanceScore) }}>{lastSnapshot.performanceScore ?? '-'}</div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>Швидкість</div>
+                </div>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ fontSize: 24, fontWeight: 'bold', color: getScoreColor(lastSnapshot.accessibilityScore) }}>{lastSnapshot.accessibilityScore ?? '-'}</div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>Доступність</div>
+                </div>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ fontSize: 24, fontWeight: 'bold', color: getScoreColor(lastSnapshot.seoScore) }}>{lastSnapshot.seoScore ?? '-'}</div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>SEO Google</div>
+                </div>
+              </div>
+            )}
 
             <div className="seo-grid">
               <div className="seo-item">
@@ -492,6 +518,13 @@ function HistoryModal({
     return `https://${url}`;
   };
 
+  const getScoreColor = (score: number | null | undefined) => {
+    if (score === null || score === undefined) return 'var(--color-text-muted)';
+    if (score >= 90) return 'var(--color-success)';
+    if (score >= 50) return 'var(--color-warning)';
+    return 'var(--color-danger)';
+  };
+
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal-content glass fade-in-up" style={{ maxWidth: 800, width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -539,6 +572,23 @@ function HistoryModal({
                 </div>
                 
                 <div className="details-scrollable">
+                  {(selectedSnapshot.performanceScore !== null || selectedSnapshot.accessibilityScore !== null || selectedSnapshot.seoScore !== null) && (
+                    <div style={{ display: 'flex', gap: 16, marginBottom: 16, padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                      <div style={{ flex: 1, textAlign: 'center' }}>
+                        <div style={{ fontSize: 24, fontWeight: 'bold', color: getScoreColor(selectedSnapshot.performanceScore) }}>{selectedSnapshot.performanceScore ?? '-'}</div>
+                        <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>Швидкість</div>
+                      </div>
+                      <div style={{ flex: 1, textAlign: 'center' }}>
+                        <div style={{ fontSize: 24, fontWeight: 'bold', color: getScoreColor(selectedSnapshot.accessibilityScore) }}>{selectedSnapshot.accessibilityScore ?? '-'}</div>
+                        <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>Доступність</div>
+                      </div>
+                      <div style={{ flex: 1, textAlign: 'center' }}>
+                        <div style={{ fontSize: 24, fontWeight: 'bold', color: getScoreColor(selectedSnapshot.seoScore) }}>{selectedSnapshot.seoScore ?? '-'}</div>
+                        <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>SEO Google</div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="metrics-row">
                     <div className="metric-box">
                       <span className="label">Слів</span>

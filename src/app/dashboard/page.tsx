@@ -19,6 +19,10 @@ export default async function DashboardPage() {
     await prisma.$executeRawUnsafe(`ALTER TABLE "SeoSnapshot" ADD COLUMN IF NOT EXISTS "brokenAssets" INTEGER;`);
     await prisma.$executeRawUnsafe(`ALTER TABLE "SeoSnapshot" ADD COLUMN IF NOT EXISTS "brokenAssetsList" JSONB;`);
     await prisma.$executeRawUnsafe(`ALTER TABLE "SeoSnapshot" ADD COLUMN IF NOT EXISTS "contentHash" TEXT;`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "SeoSnapshot" ADD COLUMN IF NOT EXISTS "performanceScore" INTEGER;`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "SeoSnapshot" ADD COLUMN IF NOT EXISTS "accessibilityScore" INTEGER;`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "SeoSnapshot" ADD COLUMN IF NOT EXISTS "seoScore" INTEGER;`);
+
 
 
     await prisma.$executeRawUnsafe(`ALTER TABLE "Monitor" ADD COLUMN IF NOT EXISTS "sslValidUntil" TIMESTAMP;`);

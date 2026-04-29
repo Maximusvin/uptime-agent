@@ -38,6 +38,8 @@ interface SeoSnapshot {
   internalLinks: number | null;
   brokenLinks: number | null;
   brokenUrls: string[] | null;
+  brokenAssets: number | null;
+  brokenAssetsList: string[] | null;
   foundUrls: string[] | null;
   newUrls: string[] | null;
   keywordsFound: Record<string, boolean> | null;
@@ -152,7 +154,9 @@ export default function DashboardClient({ user, monitors: initial }: Props) {
           foundUrls: Array.isArray(s.foundUrls) ? s.foundUrls : [],
           newUrls: Array.isArray(s.newUrls) ? s.newUrls : [],
           brokenUrls: Array.isArray(s.brokenUrls) ? s.brokenUrls : [],
+          brokenAssetsList: Array.isArray(s.brokenAssetsList) ? s.brokenAssetsList : [],
         }));
+
         setHistorySnapshots(sanitizedData);
       }
 
@@ -364,6 +368,26 @@ function CheckResultModal({ monitor, onClose }: { monitor: Monitor, onClose: () 
               </div>
             )}
 
+            {lastSnapshot.brokenAssetsList && lastSnapshot.brokenAssetsList.length > 0 && (
+              <div className="new-pages-alert glass" style={{ borderLeft: '3px solid var(--color-warning)', marginTop: 12 }}>
+                <div className="alert-header">
+                  <ImageOff size={16} className="text-warning" />
+                  <span className="text-warning">Виявлено {lastSnapshot.brokenAssetsList.length} битих картинок/скриптів!</span>
+                </div>
+                <div className="new-urls-list" style={{ maxHeight: '120px', overflowY: 'auto' }}>
+                  {lastSnapshot.brokenAssetsList.map((url, i) => (
+                    <div key={i} className="new-url-item">
+                      <X size={10} className="text-warning" />
+                      <a href={getHref(url)} target="_blank" rel="noopener noreferrer" className="truncate hover:underline" style={{ color: 'var(--color-warning)', textDecoration: 'none' }}>
+                        {url}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+
 
             <div className="seo-grid">
               <div className="seo-item">
@@ -554,6 +578,20 @@ function HistoryModal({
                       </div>
                     </div>
                   )}
+
+                  {selectedSnapshot.brokenAssetsList && selectedSnapshot.brokenAssetsList.length > 0 && (
+                    <div className="diff-section">
+                      <h4 style={{ color: 'var(--color-warning)' }}>Биті медіа/скрипти ({selectedSnapshot.brokenAssetsList.length})</h4>
+                      <div className="url-list" style={{ maxHeight: '150px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                        {selectedSnapshot.brokenAssetsList.map((url, i) => (
+                          <a key={i} href={getHref(url)} target="_blank" rel="noopener noreferrer" className="url-item hover:underline" style={{ color: 'var(--color-warning)' }}>
+                            {url}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
 
                   <div className="diff-section">
                     <h4>Структура сайту ({selectedSnapshot.foundUrls?.length || 0})</h4>

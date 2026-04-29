@@ -1,0 +1,16 @@
+name: Uptime Monitor Scheduler
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # Every 5 minutes
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  ping-monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Monitor Check
+        run: |
+          curl -X POST "https://uptime-agent-maximusvin.vercel.app/api/worker/process-queue" \
+          -H "Content-Type: application/json" \
+          -H "x-cron-secret: ${{ secrets.CRON_SECRET }}"

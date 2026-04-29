@@ -32,6 +32,10 @@ export async function POST(
       await prisma.$executeRawUnsafe(`
         ALTER TABLE "SeoSnapshot" ADD COLUMN IF NOT EXISTS "newUrls" JSONB;
       `);
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE "SeoSnapshot" ADD COLUMN IF NOT EXISTS "brokenUrls" JSONB;
+      `);
+
     } catch (e) {
       // Silence errors if columns already exist or if there's a permission issue
       console.log("Auto-migration notice (can be ignored):", e);

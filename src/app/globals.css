@@ -436,7 +436,189 @@ body {
   color: var(--color-danger);
 }
 
+/* ─── Stats & Grid ───────────────────────────────────────────────────────── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+@media (max-width: 1024px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .stats-row { grid-template-columns: 1fr; }
+}
+
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.stat-icon--total { background: rgba(99, 102, 241, 0.12); color: var(--color-primary-light); }
+.stat-icon--up { background: var(--color-success-glow); color: var(--color-success); }
+.stat-icon--down { background: var(--color-danger-glow); color: var(--color-danger); }
+.stat-icon--uptime { background: rgba(245, 158, 11, 0.12); color: var(--color-warning); }
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.monitors-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ─── Monitor Card ───────────────────────────────────────────────────────── */
+.monitor-card {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mc-info { flex: 1; min-width: 0; }
+
+.mc-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.mc-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.mc-url {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.mc-url:hover { color: var(--color-primary-light); }
+
+.mc-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mc-meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.mc-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.mc-uptime-bar {
+  height: 24px;
+}
+
+/* ─── Modals ─────────────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 480px;
+  padding: 28px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 80px 40px;
+  text-align: center;
+}
+
+.empty-state h2 { font-size: 20px; font-weight: 700; color: var(--color-text); }
+.empty-state p { color: var(--color-text-muted); font-size: 14px; }
+
 /* ─── Reports & Settings Specifics ───────────────────────────────────────── */
+
+
 .reports-list { display: flex; flex-direction: column; gap: 12px; }
 .report-card { padding: 20px 24px; display: flex; align-items: center; gap: 20px; }
 .report-icon { width: 44px; height: 44px; background: rgba(99, 102, 241, 0.12); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--color-primary-light); }

@@ -175,13 +175,13 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
     const internalLinksCount = internalLinksList.length;
     let brokenLinksCount = 0;
 
-    // Check a sample of links if there are too many, but for now let's try to check up to 50
-    const linksToCheck = internalLinksList.slice(0, 50);
+    // Limit to 20 links for faster manual checks to avoid Vercel timeouts
+    const linksToCheck = internalLinksList.slice(0, 20);
     
     const checkLink = async (url: string) => {
       try {
         const res = await axios.head(url, { 
-          timeout: 5000, 
+          timeout: 4000, 
           validateStatus: () => true,
           headers: { "User-Agent": "UptimeAgent-LinkChecker/1.0" }
         });
@@ -191,10 +191,10 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
       }
     };
 
-    // Run checks with concurrency limit of 5
+    // Run checks with concurrency limit of 10 for speed
     const chunks = [];
-    for (let i = 0; i < linksToCheck.length; i += 5) {
-      chunks.push(linksToCheck.slice(i, i + 5));
+    for (let i = 0; i < linksToCheck.length; i += 10) {
+      chunks.push(linksToCheck.slice(i, i + 10));
     }
 
     for (const chunk of chunks) {
@@ -204,8 +204,8 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
     // Check robots.txt and sitemap
     const baseUrl = new URL(monitor.url).origin;
     const [robotsRes, sitemapRes] = await Promise.allSettled([
-      axios.get(`${baseUrl}/robots.txt`, { timeout: 5000, validateStatus: () => true }),
-      axios.get(`${baseUrl}/sitemap.xml`, { timeout: 5000, validateStatus: () => true }),
+      axios.get(`${baseUrl}/robots.txt`, { timeout: 3000, validateStatus: () => true }),
+      axios.get(`${baseUrl}/sitemap.xml`, { timeout: 3000, validateStatus: () => true }),
     ]);
 
     const hasRobotsTxt =
@@ -217,31 +217,52 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
     const lastSnapshot = await prisma.seoSnapshot.findFirst({
       where: { monitorId },
       orderBy: { snapshotAt: "desc" },
-    });
+    }).catch(() => null); // Gracefully handle if DB is not updated yet
 
     const previousUrls = new Set((lastSnapshot?.foundUrls as string[]) || []);
     const newUrlsList = internalLinksList.filter(url => !previousUrls.has(url));
 
-    await prisma.seoSnapshot.create({
-      data: {
-        monitorId,
-        title,
-        metaDescription,
-        h1,
-        canonical,
-        ogImage,
-        wordCount,
-        internalLinks: internalLinksCount,
-        brokenLinks: brokenLinksCount,
-        foundUrls: internalLinksList,
-        newUrls: newUrlsList,
-        hasRobotsTxt,
-        hasSitemap,
-      },
-    });
+    try {
+      await prisma.seoSnapshot.create({
+        data: {
+          monitorId,
+          title,
+          metaDescription,
+          h1,
+          canonical,
+          ogImage,
+          wordCount,
+          internalLinks: internalLinksCount,
+          brokenLinks: brokenLinksCount,
+          foundUrls: internalLinksList,
+          newUrls: newUrlsList,
+          hasRobotsTxt,
+          hasSitemap,
+        },
+      });
+    } catch (dbError) {
+      console.error("[SEO Scan] Database save failed. Did you run prisma db push?", dbError);
+      // Try saving without new fields if it failed (fallback for migration period)
+      await prisma.seoSnapshot.create({
+        data: {
+          monitorId,
+          title,
+          metaDescription,
+          h1,
+          canonical,
+          ogImage,
+          wordCount,
+          internalLinks: internalLinksCount,
+          brokenLinks: brokenLinksCount,
+          hasRobotsTxt,
+          hasSitemap,
+        } as any,
+      }).catch(e => console.error("[SEO Scan] Fallback save also failed:", e));
+    }
   } catch (error) {
     console.error(`[SEO Scan] Failed for ${monitor.url}:`, error);
   }
 }
+
 
 

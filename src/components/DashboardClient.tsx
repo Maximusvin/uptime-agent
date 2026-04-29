@@ -435,7 +435,7 @@ function MonitorCard({
     status === "UP" ? "badge-up" : status === "DOWN" ? "badge-down" : "badge-unknown";
 
   // Build uptime bar from last 90 checks
-  const ticks = monitor.checkLogs.slice(0, 90).reverse();
+  const ticks = (monitor.checkLogs || []).slice(0, 90).reverse();
 
   return (
     <div

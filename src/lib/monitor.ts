@@ -213,6 +213,15 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
     const hasSitemap =
       sitemapRes.status === "fulfilled" && sitemapRes.value.status === 200;
 
+    // Detect new pages by comparing with last snapshot
+    const lastSnapshot = await prisma.seoSnapshot.findFirst({
+      where: { monitorId },
+      orderBy: { snapshotAt: "desc" },
+    });
+
+    const previousUrls = new Set((lastSnapshot?.foundUrls as string[]) || []);
+    const newUrlsList = internalLinksList.filter(url => !previousUrls.has(url));
+
     await prisma.seoSnapshot.create({
       data: {
         monitorId,
@@ -224,6 +233,8 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
         wordCount,
         internalLinks: internalLinksCount,
         brokenLinks: brokenLinksCount,
+        foundUrls: internalLinksList,
+        newUrls: newUrlsList,
         hasRobotsTxt,
         hasSitemap,
       },
@@ -232,4 +243,5 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
     console.error(`[SEO Scan] Failed for ${monitor.url}:`, error);
   }
 }
+
 

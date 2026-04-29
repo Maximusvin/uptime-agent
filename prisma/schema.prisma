@@ -113,6 +113,8 @@ model SeoSnapshot {
   wordCount       Int?
   internalLinks   Int?
   brokenLinks     Int?
+  foundUrls       Json?    // List of internal URLs discovered
+  newUrls         Json?    // List of new URLs since last scan
   pageSpeedScore  Int?     // 0–100 if available
 
   monitor         Monitor  @relation(fields: [monitorId], references: [id], onDelete: Cascade)

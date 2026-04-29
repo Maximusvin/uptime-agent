@@ -1,0 +1,141 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Auth (NextAuth.js required models) ───────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  accounts      Account[]
+  sessions      Session[]
+  monitors      Monitor[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Core App Models ──────────────────────────────────────────────────────────
+
+model Monitor {
+  id              String        @id @default(cuid())
+  userId          String
+  name            String
+  url             String
+  interval        Int           // in minutes: 1, 5, 10, 60, 300
+  active          Boolean       @default(true)
+  telegramChatId  String?       // Telegram channel/group ID
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  lastCheckedAt   DateTime?
+  lastStatus      CheckStatus?  // UP | DOWN | UNKNOWN
+  lastStatusCode  Int?
+  lastResponseMs  Int?
+  uptimePercent   Float?        // calculated uptime %
+
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkLogs       CheckLog[]
+  seoSnapshots    SeoSnapshot[]
+
+  @@index([userId])
+  @@index([active])
+}
+
+model CheckLog {
+  id            String      @id @default(cuid())
+  monitorId     String
+  checkedAt     DateTime    @default(now())
+  status        CheckStatus
+  statusCode    Int?
+  responseMs    Int?
+  errorMessage  String?     @db.Text
+
+  monitor       Monitor     @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+
+  @@index([monitorId, checkedAt])
+}
+
+model SeoSnapshot {
+  id              String   @id @default(cuid())
+  monitorId       String
+  snapshotAt      DateTime @default(now())
+  title           String?
+  metaDescription String?  @db.Text
+  h1              String?
+  hasRobotsTxt    Boolean?
+  hasSitemap      Boolean?
+  canonical       String?
+  ogImage         String?
+  wordCount       Int?
+  internalLinks   Int?
+  brokenLinks     Int?
+  pageSpeedScore  Int?     // 0–100 if available
+
+  monitor         Monitor  @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+
+  @@index([monitorId, snapshotAt])
+}
+
+model DailyReport {
+  id              String   @id @default(cuid())
+  userId          String
+  reportDate      DateTime // the date this report covers
+  generatedAt     DateTime @default(now())
+  totalMonitors   Int
+  totalChecks     Int
+  totalDownEvents Int
+  avgUptimePercent Float
+  reportJson      Json     // full JSON report payload
+
+  @@index([userId, reportDate])
+}
+
+enum CheckStatus {
+  UP
+  DOWN
+  UNKNOWN
+}

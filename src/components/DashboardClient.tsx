@@ -256,6 +256,15 @@ export default function DashboardClient({ user, monitors: initial }: Props) {
           onClose={() => setShowResult(null)}
         />
       )}
+
+      {historyMonitor && (
+        <HistoryModal
+          monitor={historyMonitor}
+          snapshots={historySnapshots}
+          loading={loadingHistory}
+          onClose={() => setHistoryMonitor(null)}
+        />
+      )}
     </div>
   );
 }
@@ -263,9 +272,15 @@ export default function DashboardClient({ user, monitors: initial }: Props) {
 function CheckResultModal({ monitor, onClose }: { monitor: Monitor, onClose: () => void }) {
   const lastSnapshot = monitor.seoSnapshots?.[0];
   
+  const getHref = (url: string) => {
+    if (url.startsWith('tel:') || url.startsWith('mailto:')) return url;
+    if (url.startsWith('http')) return url;
+    return `https://${url}`;
+  };
+  
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-content glass fade-in-up" style={{ maxWidth: 600 }}>
+      <div className="modal-content glass fade-in-up" style={{ maxWidth: 600, maxHeight: '90vh', overflowY: 'auto' }}>
         <div className="modal-header">
           <h2 className="modal-title">Результат перевірки: {monitor.name}</h2>
           <button className="btn-icon" onClick={onClose}><X size={18} /></button>
@@ -303,13 +318,15 @@ function CheckResultModal({ monitor, onClose }: { monitor: Monitor, onClose: () 
                   <span>Виявлено {lastSnapshot.newUrls.length} нових сторінок!</span>
                 </div>
                 <div className="new-urls-list">
-                  {lastSnapshot.newUrls.slice(0, 5).map((url, i) => (
+                  {lastSnapshot.newUrls.slice(0, 15).map((url, i) => (
                     <div key={i} className="new-url-item">
                       <ArrowRight size={10} />
-                      <span className="truncate">{url}</span>
+                      <a href={getHref(url)} target="_blank" rel="noopener noreferrer" className="truncate hover:underline" style={{ color: 'var(--color-primary-light)', textDecoration: 'none' }}>
+                        {url}
+                      </a>
                     </div>
                   ))}
-                  {lastSnapshot.newUrls.length > 5 && <div className="more-urls">...та ще {lastSnapshot.newUrls.length - 5}</div>}
+                  {lastSnapshot.newUrls.length > 15 && <div className="more-urls">...та ще {lastSnapshot.newUrls.length - 15}</div>}
                 </div>
               </div>
             )}
@@ -387,9 +404,15 @@ function HistoryModal({
 }) {
   const [selectedSnapshot, setSelectedSnapshot] = useState<SeoSnapshot | null>(null);
 
+  const getHref = (url: string) => {
+    if (url.startsWith('tel:') || url.startsWith('mailto:')) return url;
+    if (url.startsWith('http')) return url;
+    return `https://${url}`;
+  };
+
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-content glass fade-in-up" style={{ maxWidth: 800, width: '90%' }}>
+      <div className="modal-content glass fade-in-up" style={{ maxWidth: 800, width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
         <div className="modal-header">
           <h2 className="modal-title">Історія перевірок: {monitor.name}</h2>
           <button className="btn-icon" onClick={onClose}><X size={18} /></button>
@@ -454,7 +477,9 @@ function HistoryModal({
                       <h4>Нові сторінки</h4>
                       <div className="url-list">
                         {selectedSnapshot.newUrls.map((url, i) => (
-                          <div key={i} className="url-item new">{url}</div>
+                          <a key={i} href={getHref(url)} target="_blank" rel="noopener noreferrer" className="url-item new hover:underline">
+                            {url}
+                          </a>
                         ))}
                       </div>
                     </div>
@@ -462,11 +487,13 @@ function HistoryModal({
 
                   <div className="diff-section">
                     <h4>Структура сайту</h4>
-                    <div className="url-list">
-                      {selectedSnapshot.foundUrls?.map((url, i) => (
-                        <div key={i} className="url-item">{url}</div>
-                      ))}
-                    </div>
+                      <div className="url-list">
+                        {selectedSnapshot.foundUrls?.map((url, i) => (
+                          <a key={i} href={getHref(url)} target="_blank" rel="noopener noreferrer" className="url-item hover:underline">
+                            {url}
+                          </a>
+                        ))}
+                      </div>
                   </div>
                 </div>
               </div>

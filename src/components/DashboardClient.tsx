@@ -27,6 +27,16 @@ interface CheckLog {
   checkedAt: string;
 }
 
+interface SeoSnapshot {
+  title: string | null;
+  metaDescription: string | null;
+  h1: string | null;
+  wordCount: number | null;
+  internalLinks: number | null;
+  hasRobotsTxt: boolean | null;
+  hasSitemap: boolean | null;
+}
+
 interface Monitor {
   id: string;
   name: string;
@@ -40,6 +50,7 @@ interface Monitor {
   lastCheckedAt: string | null;
   uptimePercent: number | null;
   checkLogs: CheckLog[];
+  seoSnapshots?: SeoSnapshot[];
 }
 
 interface Stats {
@@ -67,6 +78,7 @@ export default function DashboardClient({ user, monitors: initial }: Props) {
   const [monitors, setMonitors] = useState<Monitor[]>(initial);
   const [showAddModal, setShowAddModal] = useState(false);
   const [checkingId, setCheckingId] = useState<string | null>(null);
+  const [showResult, setShowResult] = useState<Monitor | null>(null);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Видалити монітор?")) return;
@@ -99,6 +111,7 @@ export default function DashboardClient({ user, monitors: initial }: Props) {
       if (res.ok) {
         const updated = await res.json();
         setMonitors((m) => m.map((x) => (x.id === id ? updated : x)));
+        setShowResult(updated);
         toast.success("Перевірку завершено");
       } else {
         toast.error("Помилка перевірки");
@@ -213,6 +226,92 @@ export default function DashboardClient({ user, monitors: initial }: Props) {
           onAdded={onMonitorAdded}
         />
       )}
+
+      {showResult && (
+        <CheckResultModal
+          monitor={showResult}
+          onClose={() => setShowResult(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function CheckResultModal({ monitor, onClose }: { monitor: Monitor, onClose: () => void }) {
+  const lastSnapshot = monitor.seoSnapshots?.[0];
+  
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal-content glass fade-in-up" style={{ maxWidth: 600 }}>
+        <div className="modal-header">
+          <h2 className="modal-title">Результат перевірки: {monitor.name}</h2>
+          <button className="btn-icon" onClick={onClose}><X size={18} /></button>
+        </div>
+        
+        <div className="result-grid">
+          <div className="result-item">
+            <div className="result-label">Статус</div>
+            <div className={`result-value ${monitor.lastStatus === 'UP' ? 'text-success' : 'text-danger'}`}>
+              {monitor.lastStatus === 'UP' ? 'Доступний' : 'Недоступний'}
+            </div>
+          </div>
+          <div className="result-item">
+            <div className="result-label">Час відповіді</div>
+            <div className="result-value">{monitor.lastResponseMs} мс</div>
+          </div>
+          <div className="result-item">
+            <div className="result-label">HTTP Код</div>
+            <div className="result-value">{monitor.lastStatusCode || '—'}</div>
+          </div>
+          <div className="result-item">
+            <div className="result-label">Аптайм (24г)</div>
+            <div className="result-value">{monitor.uptimePercent?.toFixed(1)}%</div>
+          </div>
+        </div>
+
+        {lastSnapshot && (
+          <div className="seo-results">
+            <h3 className="section-title">SEO Аналіз</h3>
+            <div className="seo-grid">
+              <div className="seo-item">
+                <div className="result-label">Title</div>
+                <div className="result-value small">{lastSnapshot.title || 'Відсутній'}</div>
+              </div>
+              <div className="seo-item">
+                <div className="result-label">H1</div>
+                <div className="result-value small">{lastSnapshot.h1 || 'Відсутній'}</div>
+              </div>
+              <div className="seo-item">
+                <div className="result-label">Слів на сторінці</div>
+                <div className="result-value">{lastSnapshot.wordCount || 0}</div>
+              </div>
+              <div className="seo-item">
+                <div className="result-label">Внутрішні лінки</div>
+                <div className="result-value">{lastSnapshot.internalLinks || 0}</div>
+              </div>
+            </div>
+            
+            <div className="seo-checks">
+              <div className="check-item">
+                {lastSnapshot.hasRobotsTxt ? <CheckCircle2 size={14} className="text-success" /> : <AlertTriangle size={14} className="text-warning" />}
+                <span>robots.txt</span>
+              </div>
+              <div className="check-item">
+                {lastSnapshot.hasSitemap ? <CheckCircle2 size={14} className="text-success" /> : <AlertTriangle size={14} className="text-warning" />}
+                <span>sitemap.xml</span>
+              </div>
+              <div className="check-item">
+                {lastSnapshot.metaDescription ? <CheckCircle2 size={14} className="text-success" /> : <AlertTriangle size={14} className="text-warning" />}
+                <span>Meta Description</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="modal-actions" style={{ marginTop: 20 }}>
+          <button className="btn-primary" onClick={onClose} style={{ width: '100%' }}>Зрозуміло</button>
+        </div>
+      </div>
     </div>
   );
 }

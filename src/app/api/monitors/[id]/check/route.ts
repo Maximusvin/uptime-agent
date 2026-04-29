@@ -1,6 +1,8 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { checkMonitor, scanSeoSnapshot } from "@/lib/monitor";
+import { generateUserReport } from "@/lib/reports";
 
 export async function POST(
   req: Request,
@@ -21,17 +23,12 @@ export async function POST(
   }
 
   try {
-    // We'll call our own worker API to perform the check
-    const baseUrl = process.env.AUTH_URL || "http://localhost:3000";
-    const checkRes = await fetch(`${baseUrl}/api/worker/check`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ monitorId: monitor.id }),
-    });
-
-    if (!checkRes.ok) {
-        throw new Error("Check failed");
-    }
+    // Perform actual check and SEO scan
+    await checkMonitor(monitor.id);
+    await scanSeoSnapshot(monitor.id);
+    
+    // Update the daily report for today so it shows up in the Reports tab
+    await generateUserReport(session.user.id, new Date());
 
     const updatedMonitor = await prisma.monitor.findUnique({
         where: { id: monitor.id },
@@ -39,6 +36,10 @@ export async function POST(
             checkLogs: {
                 orderBy: { checkedAt: "desc" },
                 take: 90,
+            },
+            seoSnapshots: {
+                orderBy: { snapshotAt: "desc" },
+                take: 1,
             }
         }
     });
@@ -49,3 +50,5 @@ export async function POST(
     return NextResponse.json({ error: "Failed to perform check" }, { status: 500 });
   }
 }
+
+

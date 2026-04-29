@@ -40,6 +40,7 @@ interface SeoSnapshot {
   brokenUrls: string[] | null;
   brokenAssets: number | null;
   brokenAssetsList: string[] | null;
+  contentHash: string | null;
   foundUrls: string[] | null;
   newUrls: string[] | null;
   keywordsFound: Record<string, boolean> | null;
@@ -330,7 +331,17 @@ function CheckResultModal({ monitor, onClose }: { monitor: Monitor, onClose: () 
           <div className="seo-results">
             <h3 className="section-title">SEO Аналіз</h3>
             
+            {lastSnapshot.contentHash && monitor.seoSnapshots?.[1]?.contentHash && lastSnapshot.contentHash !== monitor.seoSnapshots[1].contentHash && (
+              <div className="new-pages-alert glass" style={{ borderLeft: '3px solid var(--color-warning)', marginTop: 12 }}>
+                <div className="alert-header">
+                  <FileDiff size={16} className="text-warning" />
+                  <span className="text-warning">Увага! Контент сторінки було змінено з моменту останньої перевірки.</span>
+                </div>
+              </div>
+            )}
+
             {lastSnapshot.newUrls && lastSnapshot.newUrls.length > 0 && (
+
               <div className="new-pages-alert glass" style={{ borderLeft: '3px solid var(--color-primary)' }}>
                 <div className="alert-header">
                   <FileSearch size={16} className="text-primary" />
@@ -553,6 +564,15 @@ function HistoryModal({
                   )}
 
 
+                  {selectedSnapshot.contentHash && snapshots[snapshots.indexOf(selectedSnapshot) + 1]?.contentHash && selectedSnapshot.contentHash !== snapshots[snapshots.indexOf(selectedSnapshot) + 1].contentHash && (
+                    <div className="diff-section" style={{ background: 'rgba(245, 158, 11, 0.05)', padding: 12, borderRadius: 8, border: '1px dashed var(--color-warning)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <FileDiff size={16} className="text-warning" />
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-warning)' }}>Виявлено зміни в контенті сторінки</span>
+                      </div>
+                    </div>
+                  )}
+
                   {selectedSnapshot.newUrls && selectedSnapshot.newUrls.length > 0 && (
                     <div className="diff-section">
                       <h4>Нові сторінки (+{selectedSnapshot.newUrls.length})</h4>
@@ -565,6 +585,7 @@ function HistoryModal({
                       </div>
                     </div>
                   )}
+
 
                   {selectedSnapshot.brokenUrls && selectedSnapshot.brokenUrls.length > 0 && (
                     <div className="diff-section">

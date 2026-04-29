@@ -123,6 +123,7 @@ model SeoSnapshot {
   brokenUrls      Json?    // List of specific broken URLs found
   brokenAssets    Int?     // Count of broken images/scripts
   brokenAssetsList Json?   // List of specific broken assets
+  contentHash     String?  // Hash of page text to detect changes
   foundUrls       Json?    // List of internal URLs discovered
   newUrls         Json?    // List of new URLs since last scan
   keywordsFound   Json?    // Result of keyword search { keyword: found_bool }

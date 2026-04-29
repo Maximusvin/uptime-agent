@@ -10,8 +10,8 @@ export default auth((req) => {
   const isPublic = isAuthPage || isApiAuth;
 
   if (!isLoggedIn && !isPublic) {
-    const signinUrl = new URL("/auth/signin", nextUrl);
-    return NextResponse.redirect(signinUrl);
+    const loginUrl = new URL("/auth/login", nextUrl);
+    return NextResponse.redirect(loginUrl);
   }
 
   if (isLoggedIn && isAuthPage) {

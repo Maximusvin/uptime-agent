@@ -37,6 +37,7 @@ interface SeoSnapshot {
   wordCount: number | null;
   internalLinks: number | null;
   brokenLinks: number | null;
+  brokenUrls: string[] | null;
   foundUrls: string[] | null;
   newUrls: string[] | null;
   snapshotAt: string;
@@ -312,13 +313,13 @@ function CheckResultModal({ monitor, onClose }: { monitor: Monitor, onClose: () 
             <h3 className="section-title">SEO Аналіз</h3>
             
             {lastSnapshot.newUrls && lastSnapshot.newUrls.length > 0 && (
-              <div className="new-pages-alert glass">
+              <div className="new-pages-alert glass" style={{ borderLeft: '3px solid var(--color-primary)' }}>
                 <div className="alert-header">
                   <FileSearch size={16} className="text-primary" />
                   <span>Виявлено {lastSnapshot.newUrls.length} нових сторінок!</span>
                 </div>
-                <div className="new-urls-list">
-                  {lastSnapshot.newUrls.slice(0, 15).map((url, i) => (
+                <div className="new-urls-list" style={{ maxHeight: '120px', overflowY: 'auto' }}>
+                  {lastSnapshot.newUrls.map((url, i) => (
                     <div key={i} className="new-url-item">
                       <ArrowRight size={10} />
                       <a href={getHref(url)} target="_blank" rel="noopener noreferrer" className="truncate hover:underline" style={{ color: 'var(--color-primary-light)', textDecoration: 'none' }}>
@@ -326,10 +327,29 @@ function CheckResultModal({ monitor, onClose }: { monitor: Monitor, onClose: () 
                       </a>
                     </div>
                   ))}
-                  {lastSnapshot.newUrls.length > 15 && <div className="more-urls">...та ще {lastSnapshot.newUrls.length - 15}</div>}
                 </div>
               </div>
             )}
+
+            {lastSnapshot.brokenUrls && lastSnapshot.brokenUrls.length > 0 && (
+              <div className="new-pages-alert glass" style={{ borderLeft: '3px solid var(--color-danger)', marginTop: 12 }}>
+                <div className="alert-header">
+                  <AlertTriangle size={16} className="text-danger" />
+                  <span className="text-danger">Виявлено {lastSnapshot.brokenUrls.length} битих посилань!</span>
+                </div>
+                <div className="new-urls-list" style={{ maxHeight: '120px', overflowY: 'auto' }}>
+                  {lastSnapshot.brokenUrls.map((url, i) => (
+                    <div key={i} className="new-url-item">
+                      <X size={10} className="text-danger" />
+                      <a href={getHref(url)} target="_blank" rel="noopener noreferrer" className="truncate hover:underline" style={{ color: 'var(--color-danger)', textDecoration: 'none' }}>
+                        {url}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
 
             <div className="seo-grid">
               <div className="seo-item">
@@ -474,8 +494,8 @@ function HistoryModal({
 
                   {selectedSnapshot.newUrls && selectedSnapshot.newUrls.length > 0 && (
                     <div className="diff-section">
-                      <h4>Нові сторінки</h4>
-                      <div className="url-list">
+                      <h4>Нові сторінки (+{selectedSnapshot.newUrls.length})</h4>
+                      <div className="url-list" style={{ maxHeight: '150px' }}>
                         {selectedSnapshot.newUrls.map((url, i) => (
                           <a key={i} href={getHref(url)} target="_blank" rel="noopener noreferrer" className="url-item new hover:underline">
                             {url}
@@ -485,16 +505,34 @@ function HistoryModal({
                     </div>
                   )}
 
-                  <div className="diff-section">
-                    <h4>Структура сайту</h4>
-                      <div className="url-list">
-                        {selectedSnapshot.foundUrls?.map((url, i) => (
-                          <a key={i} href={getHref(url)} target="_blank" rel="noopener noreferrer" className="url-item hover:underline">
+                  {selectedSnapshot.brokenUrls && selectedSnapshot.brokenUrls.length > 0 && (
+                    <div className="diff-section">
+                      <h4 style={{ color: 'var(--color-danger)' }}>Биті посилання ({selectedSnapshot.brokenUrls.length})</h4>
+                      <div className="url-list" style={{ maxHeight: '150px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                        {selectedSnapshot.brokenUrls.map((url, i) => (
+                          <a key={i} href={getHref(url)} target="_blank" rel="noopener noreferrer" className="url-item hover:underline" style={{ color: 'var(--color-danger)' }}>
                             {url}
                           </a>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  <div className="diff-section">
+                    <h4>Структура сайту ({selectedSnapshot.foundUrls?.length || 0})</h4>
+                      <div className="url-list" style={{ maxHeight: '300px' }}>
+                        {selectedSnapshot.foundUrls && Array.isArray(selectedSnapshot.foundUrls) ? (
+                          selectedSnapshot.foundUrls.map((url, i) => (
+                            <a key={i} href={getHref(url)} target="_blank" rel="noopener noreferrer" className="url-item hover:underline">
+                              {url}
+                            </a>
+                          ))
+                        ) : (
+                          <div className="url-item">Дані відсутні або ще не проскановані</div>
+                        )}
+                      </div>
                   </div>
+
                 </div>
               </div>
             ) : (

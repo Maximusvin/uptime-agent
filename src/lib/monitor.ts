@@ -173,7 +173,7 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
       .filter((link, index, self) => link && self.indexOf(link) === index) as string[];
 
     const internalLinksCount = internalLinksList.length;
-    let brokenLinksCount = 0;
+    const brokenUrlsList: string[] = [];
 
     // Limit to 20 links for faster manual checks to avoid Vercel timeouts
     const linksToCheck = internalLinksList.slice(0, 20);
@@ -185,9 +185,9 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
           validateStatus: () => true,
           headers: { "User-Agent": "UptimeAgent-LinkChecker/1.0" }
         });
-        if (res.status >= 400) brokenLinksCount++;
+        if (res.status >= 400) brokenUrlsList.push(url);
       } catch (error) {
-        brokenLinksCount++;
+        brokenUrlsList.push(url);
       }
     };
 
@@ -217,7 +217,7 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
     const lastSnapshot = await prisma.seoSnapshot.findFirst({
       where: { monitorId },
       orderBy: { snapshotAt: "desc" },
-    }).catch(() => null); // Gracefully handle if DB is not updated yet
+    }).catch(() => null);
 
     const previousUrls = new Set((lastSnapshot?.foundUrls as string[]) || []);
     const newUrlsList = internalLinksList.filter(url => !previousUrls.has(url));
@@ -233,7 +233,8 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
           ogImage,
           wordCount,
           internalLinks: internalLinksCount,
-          brokenLinks: brokenLinksCount,
+          brokenLinks: brokenUrlsList.length,
+          brokenUrls: brokenUrlsList,
           foundUrls: internalLinksList,
           newUrls: newUrlsList,
           hasRobotsTxt,
@@ -242,7 +243,7 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
       });
     } catch (dbError) {
       console.error("[SEO Scan] Database save failed. Did you run prisma db push?", dbError);
-      // Try saving without new fields if it failed (fallback for migration period)
+      // Fallback
       await prisma.seoSnapshot.create({
         data: {
           monitorId,
@@ -253,12 +254,13 @@ export async function scanSeoSnapshot(monitorId: string): Promise<void> {
           ogImage,
           wordCount,
           internalLinks: internalLinksCount,
-          brokenLinks: brokenLinksCount,
+          brokenLinks: brokenUrlsList.length,
           hasRobotsTxt,
           hasSitemap,
         } as any,
       }).catch(e => console.error("[SEO Scan] Fallback save also failed:", e));
     }
+
   } catch (error) {
     console.error(`[SEO Scan] Failed for ${monitor.url}:`, error);
   }

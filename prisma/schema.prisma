@@ -113,6 +113,7 @@ model SeoSnapshot {
   wordCount       Int?
   internalLinks   Int?
   brokenLinks     Int?
+  brokenUrls      Json?    // List of specific broken URLs found
   foundUrls       Json?    // List of internal URLs discovered
   newUrls         Json?    // List of new URLs since last scan
   pageSpeedScore  Int?     // 0–100 if available

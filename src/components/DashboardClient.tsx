@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { signOut } from "next-auth/react";
+import Sidebar from "./Sidebar";
 
 type CheckStatus = "UP" | "DOWN" | "UNKNOWN";
 
